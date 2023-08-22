@@ -1,0 +1,164 @@
+[
+    {
+        "_id": "64e00f91aa9b581a05a7e31f",
+        "age": "**",
+        "eyeColor": "blue",
+        "name": "*************",
+        "gender": "female",
+        "company": "ARTIQ",
+        "email": "**********************",
+        "phone": "+1 (881) 509-2923",
+        "address": "450 Narrows Avenue, Gila, Washington, 5897",
+        "about": "Dolor est ad excepteur velit incididunt veniam consequat. Non qui ipsum dolore Lorem et ad anim elit laborum ut. Occaecat dolor quis sit laboris sunt excepteur aliqua. Cupidatat nostrud laboris culpa do pariatur in deserunt officia deserunt cillum. Ipsum irure adipisicing ea ipsum labore ut cupidatat proident velit sit in duis. Non ut eiusmod dolor ut tempor non. Nisi sint pariatur nostrud voluptate.\r\n",
+        "friends": [
+            {
+                "id": 0,
+                "name": "Estella Le"
+            },
+            {
+                "id": 1,
+                "name": "Malone Crane"
+            },
+            {
+                "id": 2,
+                "name": "Briana Riley"
+            }
+        ],
+        "favoriteFruit": "banana"
+    },
+    {
+        "_id": "64e00f9126e96acee1434762",
+        "age": "**",
+        "eyeColor": "blue",
+        "name": "****************",
+        "gender": "female",
+        "company": "RODEOMAD",
+        "email": "****************************",
+        "phone": "+1 (898) 554-2513",
+        "address": "232 Hunts Lane, Clarence, Guam, 1634",
+        "about": "Dolor aliqua officia elit occaecat pariatur qui reprehenderit fugiat deserunt irure. Mollit nostrud adipisicing aliqua sint. Sit nostrud incididunt in qui fugiat irure. Ad ad consequat labore veniam incididunt veniam mollit in.\r\n",
+        "friends": [
+            {
+                "id": 0,
+                "name": "Marilyn Yang"
+            },
+            {
+                "id": 1,
+                "name": "Franklin Gibbs"
+            },
+            {
+                "id": 2,
+                "name": "Jimmie Rose"
+            }
+        ],
+        "favoriteFruit": "strawberry"
+    },
+    {
+        "_id": "64e00f914335304428665b3e",
+        "age": "**",
+        "eyeColor": "brown",
+        "name": "***********",
+        "gender": "male",
+        "company": "KOG",
+        "email": "******************",
+        "phone": "+1 (828) 487-2164",
+        "address": "756 Emerald Street, Hiko, Federated States Of Micronesia, 2894",
+        "about": "Eu proident cupidatat consequat incididunt deserunt amet. Officia sit dolor dolore pariatur in labore elit aute incididunt ullamco sit irure cillum. Irure sint aute laborum commodo officia mollit.\r\n",
+        "friends": [
+            {
+                "id": 0,
+                "name": "Parker Cervantes"
+            },
+            {
+                "id": 1,
+                "name": "Patricia Haynes"
+            },
+            {
+                "id": 2,
+                "name": "Carmella Dickerson"
+            }
+        ],
+        "favoriteFruit": "banana"
+    },
+    {
+        "_id": "64e00f91eeda8f3eea66dbc9",
+        "age": "**",
+        "eyeColor": "blue",
+        "name": "**********",
+        "gender": "male",
+        "company": "FLEXIGEN",
+        "email": "**********************",
+        "phone": "+1 (905) 572-2166",
+        "address": "360 Dobbin Street, Glidden, Alabama, 9110",
+        "about": "Laboris cillum ad exercitation aliquip. Fugiat ex sunt ipsum aute qui tempor. Labore duis duis magna id ut voluptate ut commodo est esse in.\r\n",
+        "friends": [
+            {
+                "id": 0,
+                "name": "Bettie Baird"
+            },
+            {
+                "id": 1,
+                "name": "Turner Valentine"
+            },
+            {
+                "id": 2,
+                "name": "Hutchinson Holt"
+            }
+        ],
+        "favoriteFruit": "strawberry"
+    },
+    {
+        "_id": "64e00f91a836731604c9b4d7",
+        "age": "**",
+        "eyeColor": "blue",
+        "name": "**************",
+        "gender": "female",
+        "company": "NETERIA",
+        "email": "*************************",
+        "phone": "+1 (893) 460-3875",
+        "address": "738 Polar Street, Urbana, South Dakota, 581",
+        "about": "Fugiat excepteur ipsum qui duis sint laborum in eiusmod amet ullamco. Consectetur dolor do laborum deserunt ea cupidatat ad. Pariatur ullamco amet reprehenderit labore adipisicing qui qui qui voluptate aute. Duis proident incididunt dolor ullamco duis. Laboris dolor aliquip fugiat do voluptate ea exercitation laborum amet id. Adipisicing nulla qui irure anim minim velit.\r\n",
+        "friends": [
+            {
+                "id": 0,
+                "name": "Strickland Golden"
+            },
+            {
+                "id": 1,
+                "name": "Karina Thompson"
+            },
+            {
+                "id": 2,
+                "name": "Carr Ochoa"
+            }
+        ],
+        "favoriteFruit": "banana"
+    },
+    {
+        "_id": "64e00f9135635c133eb458e3",
+        "age": "**",
+        "eyeColor": "blue",
+        "name": "***************",
+        "gender": "male",
+        "company": "CORPORANA",
+        "email": "****************************",
+        "phone": "+1 (906) 412-2323",
+        "address": "242 Garden Place, Durham, New Jersey, 2418",
+        "about": "Incididunt aliquip mollit anim est dolore reprehenderit commodo id sunt enim. Mollit est cupidatat laborum id do veniam in. Est deserunt ullamco esse nulla amet consequat minim veniam laborum. Ullamco commodo ea officia dolor fugiat id dolor nulla est ea deserunt. Esse et cillum enim ea aute elit labore sunt occaecat. Incididunt anim aliquip fugiat qui magna culpa id cupidatat magna ut ad dolor. Aliqua est exercitation esse excepteur sit eiusmod eiusmod consequat aute eiusmod officia sint commodo officia.\r\n",
+        "friends": [
+            {
+                "id": 0,
+                "name": "Angela Gomez"
+            },
+            {
+                "id": 1,
+                "name": "Cantu Gutierrez"
+            },
+            {
+                "id": 2,
+                "name": "Diann Diaz"
+            }
+        ],
+        "favoriteFruit": "apple"
+    }
+]
