@@ -232,7 +232,12 @@ export class QuantumvisionCdkStack extends Stack {
     });
 
     const download = api.root.addResource('download');
-    download.addMethod('GET', lambdaIntegration, {
+    // download.addMethod('GET', lambdaIntegration, {
+    //   authorizer: apiAuthorizer,
+    //   authorizationType: apigateway.AuthorizationType.COGNITO,
+    // });
+
+    download.addMethod('POST', lambdaIntegration, {
       authorizer: apiAuthorizer,
       authorizationType: apigateway.AuthorizationType.COGNITO,
     });
