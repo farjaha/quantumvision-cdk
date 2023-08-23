@@ -9,15 +9,21 @@ exports.handler = async (event) => {
     const team = requiredData.team;
     const clearanceLevel = requiredData.clearance_lavel;
     const filename = requiredData.filename;
+
+    const bucket = process.env.OBJECT_LAMBDA_AP;
     
     try {
         const params = {
-            Bucket: "arn:aws:s3-object-lambda:us-east-2:725602355952:accesspoint/s3-object-lambda-ap",
+            Bucket: bucket,
             Key: filename
         };
 
         const data = await s3.getObject(params).promise();
         const dataArray = JSON.parse(data.Body.toString('utf-8'));
+
+        // const invokeParams = {
+        //     Payload
+        // }
         const response = {
             statusCode: 200,
             headers: {
