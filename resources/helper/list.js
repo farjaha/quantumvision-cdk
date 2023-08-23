@@ -3,21 +3,14 @@ const s3 = new AWS.S3();
 
 exports.handler = async (event) => {
     try {
-        console.log(event);
+        console.log("download event:", JSON.parse(event.body));
 
-        // const stringParameters = event.queryStringParameters;
-        // if (!stringParameters) {
-        //     return {
-        //         statusCode: 400,
-        //         body: JSON.stringify({ message: 'file name is missing!' }),
-        //     };
-        // }
-
-        // const team = event.queryStringParameters.team;
-        // const prefix = `${team}/`
-        const params = { 
-            Bucket: process.env.BUCKET_NAME ,
-            // Prefix: prefix
+        const requiredData = JSON.parse(event.body);
+        const team = requiredData.team;
+        
+        const params = {
+            Bucket: process.env.BUCKET_NAME,
+            Prefix: team,
         };
         const data = await s3.listObjects(params).promise();
 
