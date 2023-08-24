@@ -14,7 +14,7 @@ exports.handler = async (event) => {
         };
         const data = await s3.listObjects(params).promise();
 
-        const fileList = data.Contents.map((object) => object.Key);
+        const fileList = data.Contents.map((object) => object.Key.replace(`${team}/`, "")).filter(filename => filename !== "");
 
         const response = {
             statusCode: 200,

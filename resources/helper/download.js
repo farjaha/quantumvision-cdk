@@ -26,12 +26,17 @@ exports.handler = async (event) => {
             bucket = bucket_top_secret;
         }
 
+        const fileKey = `${team}/${filename}`;
         const params = {
             Bucket: bucket,
-            Key: filename
+            Key: fileKey
         };
 
+        console.log("download params are:", params);
+
         const data = await s3.getObject(params).promise();
+
+        console.log("I got the data");
         const dataArray = JSON.parse(data.Body.toString('utf-8'));
 
         const response = {
