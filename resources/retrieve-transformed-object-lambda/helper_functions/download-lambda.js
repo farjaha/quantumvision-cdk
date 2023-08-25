@@ -11,9 +11,9 @@ exports.handler = async (event) => {
     const clearanceLevel = requiredData.clearance_lavel;
     const filename = requiredData.filename;
 
-    const bucket_secret = process.env.OBJECT_LAMBDA_AP_SECRET.toLocaleLowerCase();
-    const bucket_sensitive = process.env.OBJECT_LAMBDA_AP_SENSITIVE.toLocaleLowerCase();
-    const bucket_top_secret = process.env.OBJECT_LAMBDA_AP_TOP_SECRET.toLocaleLowerCase();
+    const bucket_secret = process.env.OBJECT_LAMBDA_AP_SECRET;
+    const bucket_sensitive = process.env.OBJECT_LAMBDA_AP_SENSITIVE;
+    const bucket_top_secret = process.env.OBJECT_LAMBDA_AP_TOP_SECRET;
 
     try {
 

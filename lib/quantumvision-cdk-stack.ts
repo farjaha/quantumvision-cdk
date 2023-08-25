@@ -269,8 +269,8 @@ export class QuantumvisionCdkStack extends Stack {
     const downloadObjectLambda = new lambda.Function(this, 'DownloadObjectLambda', {
       functionName: 'qv-downlodLambdaFunction',
       runtime: lambda.Runtime.NODEJS_14_X,
-      handler: 'download.handler',
-      code: lambda.Code.fromAsset('resources/helper'),
+      handler: 'download-lambda.handler',
+      code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda/helper_functions'),
       layers: [qv_layer],
       environment: {
         OBJECT_LAMBDA_AP_SECRET: objectLambdaAPSecret.attrArn,
@@ -327,8 +327,8 @@ export class QuantumvisionCdkStack extends Stack {
     const listLambdaFunction = new lambda.Function(this, 'ListLambda', {
       functionName: 'qv-listLambdaFunction',
       runtime: lambda.Runtime.NODEJS_14_X,
-      code: lambda.Code.fromAsset('resources/helper'),
-      handler: 'list.handler',
+      code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda/helper_functions'),
+      handler: 'list-lambda.handler',
       timeout: Duration.seconds(50),
       memorySize: 256,
       environment: {

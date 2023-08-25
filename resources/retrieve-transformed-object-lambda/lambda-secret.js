@@ -1,6 +1,6 @@
 const aws = require('aws-sdk');
 const s3 = new aws.S3();
-const { processAndRedactData } = require('./dataProcessor');
+const { processAndRedactData } = require('./helper_functions/dataProcessor');
 
 const redactFields = ["email", "phone", "address", "company", "gender"];
 

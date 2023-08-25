@@ -1,5 +1,6 @@
 const https = require('https');
 
+// Function to get the object from s3 bucket based on the objects url (s3Url)
 function getObjectFromS3(s3Url) {
     return new Promise((resolve, reject) => {
         const req = https.get(s3Url, (res) => {
