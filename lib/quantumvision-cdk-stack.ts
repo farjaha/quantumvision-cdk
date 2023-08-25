@@ -10,10 +10,9 @@ import {
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
+// configurable variables
 const S3_ACCESS_POINT_NAME = 's3-ap';
-const OBJECT_LAMBDA_ACCESS_POINT_NAME_SENSITIVE = 's3-object-lambda-ap-sensitive';
-const OBJECT_LAMBDA_ACCESS_POINT_NAME_SECRET = 's3-object-lambda-ap-secret';
-const OBJECT_LAMBDA_ACCESS_POINT_NAME_TOP_SECRET = 's3-object-lambda-ap-topsecret';
+const OBJECT_LAMBDA_ACCESS_POINT_NAME_PREFIX = 's3-object-lambda-ap-';
 const BUCKET_NAME = 'qv-shared-files';
 const USER_POOL_NAME = 'QVUserPool';
 const USER_POOL_CLIENT_NAME = 'QVClient';
@@ -24,9 +23,6 @@ export class QuantumvisionCdkStack extends Stack {
     super(scope, id, props);
 
     const accessPoint = `arn:aws:s3:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${S3_ACCESS_POINT_NAME}`;
-    const objectLambdaApSecret =  `arn:aws:s3-object-lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${OBJECT_LAMBDA_ACCESS_POINT_NAME_SECRET}`;
-    const objectLambdaApSensitive = `arn:aws:s3-object-lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${OBJECT_LAMBDA_ACCESS_POINT_NAME_SENSITIVE}`;
-    const objectLambdaApTopSecret = `arn:aws:s3-object-lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${OBJECT_LAMBDA_ACCESS_POINT_NAME_TOP_SECRET}`;
 
     const clearanceLevels = ['secret', 'sensitive', 'topsecret'];
 
@@ -190,6 +186,8 @@ export class QuantumvisionCdkStack extends Stack {
         },
       });
 
+      downloadLambda.addEnvironment(`OBJECT_LAMBDA_AP_${clearance.toLocaleUpperCase()}`, `arn:aws:s3-object-lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${OBJECT_LAMBDA_ACCESS_POINT_NAME_PREFIX}${clearance}`);
+
       clearanceToFunctionMap.set(clearance, retrieveLambda);
       
     });
@@ -228,11 +226,6 @@ export class QuantumvisionCdkStack extends Stack {
         actions: ['s3:GetObject', 's3-object-lambda:GetObject'],
       })
     );
-
-    downloadLambda.addEnvironment('OBJECT_LAMBDA_AP_SECRET', objectLambdaApSecret);
-    downloadLambda.addEnvironment('OBJECT_LAMBDA_AP_SENSITIVE', objectLambdaApSensitive);
-    downloadLambda.addEnvironment('OBJECT_LAMBDA_AP_TOP_SECRET', objectLambdaApTopSecret);
-
 
     const lambdaIntegration = new apigateway.LambdaIntegration(downloadLambda);
 
