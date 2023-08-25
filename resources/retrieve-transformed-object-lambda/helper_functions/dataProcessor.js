@@ -1,30 +1,6 @@
 const { getObjectFromS3 } = require('./utils/s3GetUtils');
 const { redactData } = require('./utils/redactUtils');
-const csv = require('csv-parser');
-
-async function parseCsv(csvString) {
-    const dataArray = [];
-    const stream = csv({
-        separator: ',', 
-        mapHeaders: ({ header }) => header.trim(), 
-    });
-    return new Promise((resolve, reject) => {
-        stream
-            .on('data', (data) => {
-                dataArray.push(data);
-            })
-            .on('end', () => {
-                resolve(dataArray);
-            })
-            .on('error', (error) => {
-                reject(error);
-            });
-        // Feed the CSV data to the stream
-        const lines = csvString.split('\n');
-        lines.forEach((line) => stream.write(line));
-        stream.end();
-    });
-}
+const { parseCsv } = require('./utils/parseCsvUtils');
 
 async function processAndRedactData(event, redactFields) {
 

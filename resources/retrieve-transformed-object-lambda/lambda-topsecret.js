@@ -2,7 +2,7 @@ const aws = require('aws-sdk');
 const s3 = new aws.S3();
 const { processAndRedactData } = require('./helper_functions/dataProcessor');
 
-const redactFields = ["phone", "address", "company", "gender"];
+const redactFields = ["phone", "address"];
 
 const handler = async function (event, context) {
     console.log(JSON.stringify(event, undefined, 2));

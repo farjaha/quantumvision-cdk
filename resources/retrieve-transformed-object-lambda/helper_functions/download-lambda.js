@@ -33,6 +33,7 @@ exports.handler = async (event) => {
             Key: fileKey
         };
 
+        console.log("before getting data");
         const data = await s3.getObject(params).promise();
 
         console.log("I got the data:", data);

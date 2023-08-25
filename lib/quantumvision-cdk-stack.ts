@@ -1,8 +1,7 @@
-import { Stack, StackProps, CfnOutput, Aws, Duration, RemovalPolicy } from 'aws-cdk-lib';
+import { Stack, StackProps, Aws, Duration, RemovalPolicy } from 'aws-cdk-lib';
 import {
   aws_iam as iam,
   aws_kms as kms,
-  aws_ec2 as ec2,
   aws_cognito as cognito,
   aws_s3 as s3,
   aws_lambda as lambda,
@@ -11,7 +10,6 @@ import {
 } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
-// configurable variables
 const S3_ACCESS_POINT_NAME = 's3-ap';
 const OBJECT_LAMBDA_ACCESS_POINT_NAME_SENSITIVE = 's3-object-lambda-ap-sensitive';
 const OBJECT_LAMBDA_ACCESS_POINT_NAME_SECRET = 's3-object-lambda-ap-secret';
@@ -26,6 +24,11 @@ export class QuantumvisionCdkStack extends Stack {
     super(scope, id, props);
 
     const accessPoint = `arn:aws:s3:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${S3_ACCESS_POINT_NAME}`;
+    const objectLambdaApSecret =  `arn:aws:s3-object-lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${OBJECT_LAMBDA_ACCESS_POINT_NAME_SECRET}`;
+    const objectLambdaApSensitive = `arn:aws:s3-object-lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${OBJECT_LAMBDA_ACCESS_POINT_NAME_SENSITIVE}`;
+    const objectLambdaApTopSecret = `arn:aws:s3-object-lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${OBJECT_LAMBDA_ACCESS_POINT_NAME_TOP_SECRET}`;
+
+    const clearanceLevels = ['secret', 'sensitive', 'topsecret'];
 
     // Create a vpc for lambda
     // const vpc = new ec2.Vpc(this, 'LambdaVpc', {
@@ -45,54 +48,54 @@ export class QuantumvisionCdkStack extends Stack {
     //   service: ec2.GatewayVpcEndpointAwsService.S3
     // });
 
-    // Create a cognito userpool for authentication
+    // Create the userpool with all required configs
     const userPool = new cognito.UserPool(this, 'QVUserPool', {
       userPoolName: USER_POOL_NAME,
       selfSignUpEnabled: false,
       autoVerify: {
-          email: true,
+        email: true,
       },
       standardAttributes: {
-          email: {
-              mutable: true,
-              required: true,
-          }
+        email: {
+          mutable: true,
+          required: true,
+        },
       },
       customAttributes: {
-          'clearance_level': new cognito.StringAttribute(),
-          'team': new cognito.StringAttribute(),
+        'clearance_level': new cognito.StringAttribute(),
+        'team': new cognito.StringAttribute(),
       },
       removalPolicy: RemovalPolicy.DESTROY,
       signInAliases: {
-          email: true,
+        email: true,
       },
-  });
+    });
 
-  // Create User Pool Client
-  const userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
+    // Create User Pool Client
+    const userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
       userPoolClientName: USER_POOL_CLIENT_NAME,
       userPool: userPool,
       refreshTokenValidity: Duration.hours(24),
       authFlows: {
-          userPassword: true,
+        userPassword: true,
       },
       oAuth: {
-          callbackUrls: ['http://localhost:3000/'],
-          logoutUrls: ['http://localhost:3000/logout'],
-          flows: {
-              implicitCodeGrant: true,
-          },
+        callbackUrls: ['http://localhost:3000/'],
+        logoutUrls: ['http://localhost:3000/logout'],
+        flows: {
+          implicitCodeGrant: true,
+        },
       },
-  });
+    });
 
-  // Create User Pool Domain
-  const userPoolDomain = userPool.addDomain('QVUserPoolDomain', {
+    // Create User Pool Domain
+    const userPoolDomain = userPool.addDomain('QVUserPoolDomain', {
       cognitoDomain: {
-          domainPrefix: COGNITO_DOMAIN_PREFIX,
+        domainPrefix: COGNITO_DOMAIN_PREFIX,
       },
-  });
+    });
 
-    // Set up a bucket
+    // Bucket to store shared files
     const bucket = new s3.Bucket(this, 'SharedBucket', {
       accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
       bucketName: BUCKET_NAME,
@@ -106,9 +109,7 @@ export class QuantumvisionCdkStack extends Stack {
       autoDeleteObjects: true,
       cors: [
         {
-          allowedMethods: [
-            s3.HttpMethods.GET,
-          ],
+          allowedMethods: [s3.HttpMethods.GET],
           allowedOrigins: ['*'],
           allowedHeaders: ['*'],
         },
@@ -117,83 +118,81 @@ export class QuantumvisionCdkStack extends Stack {
 
     // Delegating access control to access points
     // https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points-policies.html
-    bucket.addToResourcePolicy(new iam.PolicyStatement({
-      actions: ['*'],
-      principals: [new iam.AnyPrincipal()],
-      resources: [
-        bucket.bucketArn,
-        bucket.arnForObjects('*')
-      ],
-      conditions: {
-        'StringEquals':
-        {
-          's3:DataAccessPointAccount': `${Aws.ACCOUNT_ID}`
-        }
-      }
-    }));
+    bucket.addToResourcePolicy(
+      new iam.PolicyStatement({
+        actions: ['*'],
+        principals: [new iam.AnyPrincipal()],
+        resources: [bucket.bucketArn, bucket.arnForObjects('*')],
+        conditions: {
+          StringEquals: {
+            's3:DataAccessPointAccount': `${Aws.ACCOUNT_ID}`,
+          },
+        },
+      })
+    );
 
+    // Lambda layer to share the required libraries among lambda functions
     const qv_layer = new lambda.LayerVersion(this, 'QVLayer', {
       layerVersionName: 'qv-layer',
       code: lambda.Code.fromAsset('./csv-layer'),
       compatibleRuntimes: [lambda.Runtime.NODEJS_14_X],
     });
 
-    // lambda to process our objects during retrieval
-    const retrieveTransformedObjectLambdaSecret = new lambda.Function(this, 'RetrieveTransformedObjectLambdaSecret', {
-      functionName: 'qv-s3ObjectLambdaFunctionSecret',
+    const downloadLambda = new lambda.Function(this, 'DownloadLambda', {
+      functionName: 'qv-downlodLambdaFunction',
       runtime: lambda.Runtime.NODEJS_14_X,
-      handler: 'lambda-secret.handler',
-      code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda'),
+      handler: 'download-lambda.handler',
+      code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda/helper_functions'),
       layers: [qv_layer],
-      // vpc: vpc,
-      // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
     });
 
-    const retrieveTransformedObjectLambdaSensitive = new lambda.Function(this, 'RetrieveTransformedObjectLambdaSensitive', {
-      functionName: 'qv-s3ObjectLambdaFunctionSensitive',
-      runtime: lambda.Runtime.NODEJS_14_X,
-      handler: 'lambda-sensitive.handler',
-      code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda'),
-      layers: [qv_layer],
-      // vpc: vpc,
-      // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+    bucket.grantRead(downloadLambda);
+
+    const clearanceToFunctionMap = new Map<string, lambda.Function>();
+
+    // Creating lambda functions to handle the redaction logic for each different clearance level
+    clearanceLevels.forEach(clearance => {
+      const retrieveLambda = new lambda.Function(this, `RetrieveTransformedObjectLambda${clearance}`, {
+        functionName: `qv-s3ObjectLambdaFunction${clearance}`,
+        runtime: lambda.Runtime.NODEJS_14_X,
+        handler: `lambda-${clearance}.handler`,
+        code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda'),
+        layers: [qv_layer],
+        // vpc: vpc,
+        // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+      });
+
+      retrieveLambda.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          resources: ['*'],
+          actions: ['s3-object-lambda:WriteGetObjectResponse'],
+        })
+      );
+
+      bucket.grantRead(retrieveLambda);
+
+      // Object lambda access points for each clearance level
+      new s3ObjectLambda.CfnAccessPoint(this, `S3ObjectLambdaAP${clearance.toLocaleUpperCase()}`, {
+        name: `s3-object-lambda-ap-${clearance}`,
+        objectLambdaConfiguration: {
+          supportingAccessPoint: accessPoint,
+          transformationConfigurations: [
+            {
+              actions: ['GetObject'],
+              contentTransformation: {
+                'AwsLambda': {
+                  'FunctionArn': retrieveLambda.functionArn,
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      clearanceToFunctionMap.set(clearance, retrieveLambda);
+      
     });
-
-    const retrieveTransformedObjectLambdaTopSecret = new lambda.Function(this, 'RetrieveTransformedObjectLambdaTopSecret', {
-      functionName: 'qv-s3ObjectLambdaFunctionTopSecret',
-      runtime: lambda.Runtime.NODEJS_14_X,
-      handler: 'lambda-topsecret.handler',
-      code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda'),
-      layers: [qv_layer],
-      // vpc: vpc,
-      // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
-    });
-
-    // Object lambda s3 access
-    retrieveTransformedObjectLambdaSecret.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      resources: ['*'],
-      actions: ['s3-object-lambda:WriteGetObjectResponse']
-    }
-    ));
-
-    retrieveTransformedObjectLambdaSensitive.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      resources: ['*'],
-      actions: ['s3-object-lambda:WriteGetObjectResponse']
-    }
-    ));
-
-    retrieveTransformedObjectLambdaTopSecret.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      resources: ['*'],
-      actions: ['s3-object-lambda:WriteGetObjectResponse']
-    }
-    ));
-
-    bucket.grantRead(retrieveTransformedObjectLambdaSecret);
-    bucket.grantRead(retrieveTransformedObjectLambdaSensitive);
-    bucket.grantRead(retrieveTransformedObjectLambdaTopSecret);
 
     // Associate Bucket's access point with lambda get access
     const policyDoc = new iam.PolicyDocument({
@@ -203,9 +202,9 @@ export class QuantumvisionCdkStack extends Stack {
           effect: iam.Effect.ALLOW,
           actions: ['s3:GetObject'],
           principals: [
-            new iam.ArnPrincipal(<string>retrieveTransformedObjectLambdaSecret.role?.roleArn),
-            new iam.ArnPrincipal(<string>retrieveTransformedObjectLambdaSensitive.role?.roleArn),
-            new iam.ArnPrincipal(<string>retrieveTransformedObjectLambdaTopSecret.role?.roleArn)
+            new iam.ArnPrincipal(<string>clearanceToFunctionMap.get('secret')!.role?.roleArn),
+            new iam.ArnPrincipal(<string>clearanceToFunctionMap.get('sensitive')!.role?.roleArn),
+            new iam.ArnPrincipal(<string>clearanceToFunctionMap.get('topsecret')!.role?.roleArn)
           ],
           resources: [`${accessPoint}/object/*`]
         })
@@ -216,114 +215,58 @@ export class QuantumvisionCdkStack extends Stack {
       bucket: bucket.bucketName,
       name: S3_ACCESS_POINT_NAME,
       policy: policyDoc
-    }
+    });
+
+    clearanceToFunctionMap.forEach(retriveLambda => {
+      retriveLambda.grantInvoke(downloadLambda);
+    });
+
+    downloadLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        resources: ['*'],
+        actions: ['s3:GetObject', 's3-object-lambda:GetObject'],
+      })
     );
 
-    // Access point to receive GET request and use lambda to process objects
-    const objectLambdaAPSecret = new s3ObjectLambda.CfnAccessPoint(this, 's3ObjectLambdaAPSecret', {
-      name: OBJECT_LAMBDA_ACCESS_POINT_NAME_SECRET,
-      objectLambdaConfiguration: {
-        supportingAccessPoint: accessPoint,
-        transformationConfigurations: [{
-          actions: ['GetObject'],
-          contentTransformation: {
-            'AwsLambda': {
-              'FunctionArn': `${retrieveTransformedObjectLambdaSecret.functionArn}`
-            }
-          }
-        }]
-      }
-    });
+    downloadLambda.addEnvironment('OBJECT_LAMBDA_AP_SECRET', objectLambdaApSecret);
+    downloadLambda.addEnvironment('OBJECT_LAMBDA_AP_SENSITIVE', objectLambdaApSensitive);
+    downloadLambda.addEnvironment('OBJECT_LAMBDA_AP_TOP_SECRET', objectLambdaApTopSecret);
 
-    const objectLambdaAPSensitive = new s3ObjectLambda.CfnAccessPoint(this, 's3ObjectLambdaAPSensitive', {
-      name: OBJECT_LAMBDA_ACCESS_POINT_NAME_SENSITIVE,
-      objectLambdaConfiguration: {
-        supportingAccessPoint: accessPoint,
-        transformationConfigurations: [{
-          actions: ['GetObject'],
-          contentTransformation: {
-            'AwsLambda': {
-              'FunctionArn': `${retrieveTransformedObjectLambdaSensitive.functionArn}`
-            }
-          }
-        }]
-      }
-    });
 
-    const objectLambdaAPTopSecret = new s3ObjectLambda.CfnAccessPoint(this, 's3ObjectLambdaAPTopSecret', {
-      name: OBJECT_LAMBDA_ACCESS_POINT_NAME_TOP_SECRET,
-      objectLambdaConfiguration: {
-        supportingAccessPoint: accessPoint,
-        transformationConfigurations: [{
-          actions: ['GetObject'],
-          contentTransformation: {
-            'AwsLambda': {
-              'FunctionArn': `${retrieveTransformedObjectLambdaTopSecret.functionArn}`
-            }
-          }
-        }]
-      }
-    });
-
-    // lambda to process our objects during retrieval
-    const downloadObjectLambda = new lambda.Function(this, 'DownloadObjectLambda', {
-      functionName: 'qv-downlodLambdaFunction',
-      runtime: lambda.Runtime.NODEJS_14_X,
-      handler: 'download-lambda.handler',
-      code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda/helper_functions'),
-      layers: [qv_layer],
-      environment: {
-        OBJECT_LAMBDA_AP_SECRET: objectLambdaAPSecret.attrArn,
-        OBJECT_LAMBDA_AP_SENSITIVE: objectLambdaAPSensitive.attrArn,
-        OBJECT_LAMBDA_AP_TOP_SECRET: objectLambdaAPTopSecret.attrArn,
-      }
-    });
-
-    bucket.grantRead(downloadObjectLambda);
-    retrieveTransformedObjectLambdaSecret.grantInvoke(downloadObjectLambda);
-    retrieveTransformedObjectLambdaSensitive.grantInvoke(downloadObjectLambda);
-    retrieveTransformedObjectLambdaTopSecret.grantInvoke(downloadObjectLambda);
-    downloadObjectLambda.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      resources: ['*'],
-      actions: [
-        "s3:GetObject",
-        "s3-object-lambda:GetObject"
-      ],
-    }))
-
-    const lambdaIntegration = new apigateway.LambdaIntegration(downloadObjectLambda);
+    const lambdaIntegration = new apigateway.LambdaIntegration(downloadLambda);
 
     const api = new apigateway.RestApi(this, 'QV-api', {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
-        allowHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token', 'X-Amz-User-Agent'],
+        allowHeaders: [
+          'Content-Type',
+          'Authorization',
+          'X-Amz-Date',
+          'X-Api-Key',
+          'X-Amz-Security-Token',
+          'X-Amz-User-Agent',
+        ],
       },
       deployOptions: {
-        stageName: "dev",
-        tracingEnabled: true
-      }
+        stageName: 'dev',
+        tracingEnabled: true,
+      },
     });
 
-    // Add authentication to api gateway
     const apiAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
       cognitoUserPools: [userPool],
       authorizerName: 'QV-Authorizer',
     });
 
     const download = api.root.addResource('download');
-    // download.addMethod('GET', lambdaIntegration, {
-    //   authorizer: apiAuthorizer,
-    //   authorizationType: apigateway.AuthorizationType.COGNITO,
-    // });
-
     download.addMethod('POST', lambdaIntegration, {
       authorizer: apiAuthorizer,
       authorizationType: apigateway.AuthorizationType.COGNITO,
     });
 
-    // Files list lambda
+
     const listLambdaFunction = new lambda.Function(this, 'ListLambda', {
       functionName: 'qv-listLambdaFunction',
       runtime: lambda.Runtime.NODEJS_14_X,
@@ -333,22 +276,15 @@ export class QuantumvisionCdkStack extends Stack {
       memorySize: 256,
       environment: {
         BUCKET_NAME: bucket.bucketName,
-      }
+      },
     });
-    bucket.grantRead(listLambdaFunction);
 
+    bucket.grantRead(listLambdaFunction);
     const listLambdaIntegration = new apigateway.LambdaIntegration(listLambdaFunction);
     const files = api.root.addResource('qvFiles');
     files.addMethod('POST', listLambdaIntegration, {
       authorizer: apiAuthorizer,
       authorizationType: apigateway.AuthorizationType.COGNITO,
     });
-
-    // new CfnOutput(this, 'exampleBucketArn', { value: bucket.bucketArn });
-    // new CfnOutput(this, 'objectLambdaArn', { value: retrieveTransformedObjectLambda.functionArn });
-    // new CfnOutput(this, 'objectLambdaAccessPointArn', { value: objectLambdaAP.attrArn });
-    // new CfnOutput(this, 'objectLambdaAccessPointUrl', {
-    //   value: `https://console.aws.amazon.com/s3/olap/${Aws.ACCOUNT_ID}/${OBJECT_LAMBDA_ACCESS_POINT_NAME}?region=${Aws.REGION}`
-    // });
   }
 }
