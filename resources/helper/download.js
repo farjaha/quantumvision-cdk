@@ -1,5 +1,6 @@
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
+const Papa = require('papaparse');
 
 exports.handler = async (event) => {
 
@@ -13,7 +14,7 @@ exports.handler = async (event) => {
     const bucket_secret = process.env.OBJECT_LAMBDA_AP_SECRET.toLocaleLowerCase();
     const bucket_sensitive = process.env.OBJECT_LAMBDA_AP_SENSITIVE.toLocaleLowerCase();
     const bucket_top_secret = process.env.OBJECT_LAMBDA_AP_TOP_SECRET.toLocaleLowerCase();
-    
+
     try {
 
         let bucket = bucket_secret;
@@ -32,23 +33,35 @@ exports.handler = async (event) => {
             Key: fileKey
         };
 
-        console.log("download params are:", params);
-
         const data = await s3.getObject(params).promise();
 
-        console.log("I got the data");
+        console.log("I got the data:", data);
         const dataArray = JSON.parse(data.Body.toString('utf-8'));
+        console.log("POOOOX ARRAAAAAYYYY:", dataArray);
+
+        let contentType;
+        let body;
+
+        if (filename.endsWith('.json')) {
+            contentType = 'application/json';
+            body = JSON.stringify(dataArray);
+
+        } else if (filename.endsWith('.csv')) {
+            contentType = 'text/csv';
+            const csvData = Papa.unparse(dataArray);
+            body = csvData;
+        }
 
         const response = {
             statusCode: 200,
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': contentType,
                 'Content-Disposition': `attachment; filename="${clearanceLevel}-${filename}"`,
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent',
                 'Access-Control-Allow-Methods': 'OPTIONS,GET,PUT,POST,DELETE',
             },
-            body: JSON.stringify(dataArray),
+            body: body,
         };
         return response;
     } catch (error) {

@@ -132,12 +132,19 @@ export class QuantumvisionCdkStack extends Stack {
       }
     }));
 
+    const qv_layer = new lambda.LayerVersion(this, 'QVLayer', {
+      layerVersionName: 'qv-layer',
+      code: lambda.Code.fromAsset('./csv-layer'),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_14_X],
+    });
+
     // lambda to process our objects during retrieval
     const retrieveTransformedObjectLambdaSecret = new lambda.Function(this, 'RetrieveTransformedObjectLambdaSecret', {
       functionName: 'qv-s3ObjectLambdaFunctionSecret',
       runtime: lambda.Runtime.NODEJS_14_X,
       handler: 'lambda-secret.handler',
       code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda'),
+      layers: [qv_layer],
       // vpc: vpc,
       // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
     });
@@ -147,6 +154,7 @@ export class QuantumvisionCdkStack extends Stack {
       runtime: lambda.Runtime.NODEJS_14_X,
       handler: 'lambda-sensitive.handler',
       code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda'),
+      layers: [qv_layer],
       // vpc: vpc,
       // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
     });
@@ -156,6 +164,7 @@ export class QuantumvisionCdkStack extends Stack {
       runtime: lambda.Runtime.NODEJS_14_X,
       handler: 'lambda-topsecret.handler',
       code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda'),
+      layers: [qv_layer],
       // vpc: vpc,
       // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
     });
@@ -262,6 +271,7 @@ export class QuantumvisionCdkStack extends Stack {
       runtime: lambda.Runtime.NODEJS_14_X,
       handler: 'download.handler',
       code: lambda.Code.fromAsset('resources/helper'),
+      layers: [qv_layer],
       environment: {
         OBJECT_LAMBDA_AP_SECRET: objectLambdaAPSecret.attrArn,
         OBJECT_LAMBDA_AP_SENSITIVE: objectLambdaAPSensitive.attrArn,
