@@ -8,6 +8,7 @@ import {
   aws_s3objectlambda as s3ObjectLambda,
   aws_apigateway as apigateway,
 } from 'aws-cdk-lib';
+import { AnyPrincipal } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 
 // configurable variables
@@ -17,6 +18,7 @@ const BUCKET_NAME = 'qv-shared-files';
 const USER_POOL_NAME = 'QVUserPool';
 const USER_POOL_CLIENT_NAME = 'QVClient';
 const COGNITO_DOMAIN_PREFIX = 'qv-auth';
+const allowedIP = ['68.252.124.59'];
 
 export class QuantumvisionCdkStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -183,7 +185,7 @@ export class QuantumvisionCdkStack extends Stack {
       downloadLambda.addEnvironment(`OBJECT_LAMBDA_AP_${clearance.toLocaleUpperCase()}`, `arn:aws:s3-object-lambda:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${OBJECT_LAMBDA_ACCESS_POINT_NAME_PREFIX}${clearance}`);
 
       clearanceToFunctionMap.set(clearance, retrieveLambda);
-      
+
     });
 
     // Associate Bucket's access point with lambda get access
@@ -223,6 +225,28 @@ export class QuantumvisionCdkStack extends Stack {
 
     const lambdaIntegration = new apigateway.LambdaIntegration(downloadLambda);
 
+    // Create a resource policy for api gateway
+    const apiResourcePolicy = new iam.PolicyDocument({
+      statements: [
+        new iam.PolicyStatement({
+          actions: ['execute-api:Invoke'],
+          principals: [new iam.ArnPrincipal('*')],
+          resources: ['*'],
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.DENY,
+          principals: [new iam.ArnPrincipal('*')],
+          actions: ['execute-api:Invoke'],
+          resources: ['*'],
+          conditions: {
+            'NotIpAddress': {
+              "aws:SourceIp": allowedIP
+            }
+          }
+        })
+      ]
+    });
+
     const api = new apigateway.RestApi(this, 'QV-api', {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
@@ -240,6 +264,7 @@ export class QuantumvisionCdkStack extends Stack {
         stageName: 'dev',
         tracingEnabled: true,
       },
+      policy: apiResourcePolicy,
     });
 
     const apiAuthorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'Authorizer', {
