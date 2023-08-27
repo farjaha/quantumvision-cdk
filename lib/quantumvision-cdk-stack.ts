@@ -74,13 +74,7 @@ export class QuantumvisionCdkStack extends Stack {
       refreshTokenValidity: Duration.hours(24),
       authFlows: {
         userPassword: true,
-      },
-      oAuth: {
-        callbackUrls: ['http://localhost:3000/'],
-        logoutUrls: ['http://localhost:3000/logout'],
-        flows: {
-          implicitCodeGrant: true,
-        },
+        userSrp: true,
       },
     });
 

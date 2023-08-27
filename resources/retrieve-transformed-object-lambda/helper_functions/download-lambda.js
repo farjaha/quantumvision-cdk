@@ -13,7 +13,7 @@ exports.handler = async (event) => {
 
     const bucket_secret = process.env.OBJECT_LAMBDA_AP_SECRET;
     const bucket_sensitive = process.env.OBJECT_LAMBDA_AP_SENSITIVE;
-    const bucket_top_secret = process.env.OBJECT_LAMBDA_AP_TOP_SECRET;
+    const bucket_top_secret = process.env.OBJECT_LAMBDA_AP_TOPSECRET;
 
     try {
 
@@ -33,12 +33,9 @@ exports.handler = async (event) => {
             Key: fileKey
         };
 
-        console.log("before getting data");
         const data = await s3.getObject(params).promise();
 
-        console.log("I got the data:", data);
         const dataArray = JSON.parse(data.Body.toString('utf-8'));
-        console.log("POOOOX ARRAAAAAYYYY:", dataArray);
 
         let contentType;
         let body;
