@@ -9,7 +9,6 @@ import {
   aws_s3objectlambda as s3ObjectLambda,
   aws_apigateway as apigateway,
 } from 'aws-cdk-lib';
-import { CfnNatGateway } from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 
 // configurable variables
@@ -48,9 +47,9 @@ export class QuantumvisionCdkStack extends Stack {
     });
 
     // Create VPC Gateway endpoint
-    // const s3Endpoint = vpc.addGatewayEndpoint('S3Endpoint', {
-    //   service: ec2.GatewayVpcEndpointAwsService.S3
-    // });
+    const s3Endpoint = vpc.addGatewayEndpoint('S3Endpoint', {
+      service: ec2.GatewayVpcEndpointAwsService.S3
+    });
 
     // Create the userpool with all required configs
     const userPool = new cognito.UserPool(this, 'QVUserPool', {
@@ -112,6 +111,18 @@ export class QuantumvisionCdkStack extends Stack {
           allowedHeaders: ['*'],
         },
       ],
+    });
+
+    bucket.addLifecycleRule({
+      transitions: [{
+        storageClass: s3.StorageClass.INTELLIGENT_TIERING,
+        transitionAfter: Duration.days(90),
+      },
+      {
+        storageClass: s3.StorageClass.GLACIER,
+        transitionAfter: Duration.days(365),
+      }],
+      expiration: Duration.days(2555),
     });
 
     // Delegating access control to access points
