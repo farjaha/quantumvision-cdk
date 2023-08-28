@@ -5,10 +5,11 @@ import {
   aws_cognito as cognito,
   aws_s3 as s3,
   aws_lambda as lambda,
+  aws_ec2 as ec2,
   aws_s3objectlambda as s3ObjectLambda,
   aws_apigateway as apigateway,
 } from 'aws-cdk-lib';
-import { AnyPrincipal } from 'aws-cdk-lib/aws-iam';
+import { CfnNatGateway } from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 
 // configurable variables
@@ -29,17 +30,22 @@ export class QuantumvisionCdkStack extends Stack {
     const clearanceLevels = ['secret', 'sensitive', 'topsecret'];
 
     // Create a vpc for lambda
-    // const vpc = new ec2.Vpc(this, 'LambdaVpc', {
-    //   vpcName: 'qv-lambdaVpc',
-    //   ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
-    //   subnetConfiguration: [
-    //     {
-    //       cidrMask: 24,
-    //       name: 'PrivateSubnet',
-    //       subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-    //     }
-    //   ]
-    // });
+    const vpc = new ec2.Vpc(this, 'LambdaVpc', {
+      vpcName: 'qv-lambdaVpc',
+      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
+      subnetConfiguration: [
+        {
+          cidrMask: 24,
+          name: 'PrivateSubnet',
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        },
+        {
+          cidrMask: 24,
+          name: 'PublicSubnet',
+          subnetType: ec2.SubnetType.PUBLIC,
+        }
+      ]
+    });
 
     // Create VPC Gateway endpoint
     // const s3Endpoint = vpc.addGatewayEndpoint('S3Endpoint', {
@@ -136,6 +142,7 @@ export class QuantumvisionCdkStack extends Stack {
       handler: 'download-lambda.handler',
       code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda/helper_functions'),
       layers: [qv_layer],
+      timeout: Duration.seconds(50),
     });
 
     bucket.grantRead(downloadLambda);
@@ -150,8 +157,8 @@ export class QuantumvisionCdkStack extends Stack {
         handler: `lambda-${clearance}.handler`,
         code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda'),
         layers: [qv_layer],
-        // vpc: vpc,
-        // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },
+        vpc: vpc,
+        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       });
 
       retrieveLambda.addToRolePolicy(
