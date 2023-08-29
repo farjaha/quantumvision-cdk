@@ -17,39 +17,18 @@ const OBJECT_LAMBDA_ACCESS_POINT_NAME_PREFIX = 's3-object-lambda-ap-';
 const BUCKET_NAME = 'qv-shared-files';
 const USER_POOL_NAME = 'QVUserPool';
 const USER_POOL_CLIENT_NAME = 'QVClient';
-const COGNITO_DOMAIN_PREFIX = 'qv-auth';
-const allowedIP = ['68.252.124.59'];
+const allowedIPs = ['68.252.124.59'];
 
+// The main stack to provision the quantum vision's share file infrastructure
 export class QuantumvisionCdkStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
+    // S3 access point arn that we will use as a part of s3 object lambda
     const accessPoint = `arn:aws:s3:${Aws.REGION}:${Aws.ACCOUNT_ID}:accesspoint/${S3_ACCESS_POINT_NAME}`;
 
+    // List of clearance levels that will be used for naming the access points and lambda functions
     const clearanceLevels = ['secret', 'sensitive', 'topsecret'];
-
-    // Create a vpc for lambda
-    const vpc = new ec2.Vpc(this, 'LambdaVpc', {
-      vpcName: 'qv-lambdaVpc',
-      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
-      subnetConfiguration: [
-        {
-          cidrMask: 24,
-          name: 'PrivateSubnet',
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-        },
-        {
-          cidrMask: 24,
-          name: 'PublicSubnet',
-          subnetType: ec2.SubnetType.PUBLIC,
-        }
-      ]
-    });
-
-    // Create VPC Gateway endpoint
-    const s3Endpoint = vpc.addGatewayEndpoint('S3Endpoint', {
-      service: ec2.GatewayVpcEndpointAwsService.S3
-    });
 
     // Create the userpool with all required configs
     const userPool = new cognito.UserPool(this, 'QVUserPool', {
@@ -85,14 +64,7 @@ export class QuantumvisionCdkStack extends Stack {
       },
     });
 
-    // Create User Pool Domain
-    const userPoolDomain = userPool.addDomain('QVUserPoolDomain', {
-      cognitoDomain: {
-        domainPrefix: COGNITO_DOMAIN_PREFIX,
-      },
-    });
-
-    // Bucket to store shared files
+    // S3 Bucket to store shared files
     const bucket = new s3.Bucket(this, 'SharedBucket', {
       accessControl: s3.BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
       bucketName: BUCKET_NAME,
@@ -113,6 +85,7 @@ export class QuantumvisionCdkStack extends Stack {
       ],
     });
 
+    //Lifecycle policy to to preserve data for seven years with frequent access during first three months
     bucket.addLifecycleRule({
       transitions: [{
         storageClass: s3.StorageClass.INTELLIGENT_TIERING,
@@ -147,6 +120,7 @@ export class QuantumvisionCdkStack extends Stack {
       compatibleRuntimes: [lambda.Runtime.NODEJS_14_X],
     });
 
+    // Lambda function to handle the file download and choose the currect access point
     const downloadLambda = new lambda.Function(this, 'DownloadLambda', {
       functionName: 'qv-downlodLambdaFunction',
       runtime: lambda.Runtime.NODEJS_14_X,
@@ -168,8 +142,6 @@ export class QuantumvisionCdkStack extends Stack {
         handler: `lambda-${clearance}.handler`,
         code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda'),
         layers: [qv_layer],
-        vpc: vpc,
-        vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
       });
 
       retrieveLambda.addToRolePolicy(
@@ -223,6 +195,7 @@ export class QuantumvisionCdkStack extends Stack {
       ]
     });
 
+    // S3 access point
     new s3.CfnAccessPoint(this, 'exampleBucketAP', {
       bucket: bucket.bucketName,
       name: S3_ACCESS_POINT_NAME,
@@ -258,7 +231,7 @@ export class QuantumvisionCdkStack extends Stack {
           resources: ['*'],
           conditions: {
             'NotIpAddress': {
-              "aws:SourceIp": allowedIP
+              "aws:SourceIp": allowedIPs
             }
           }
         })
@@ -318,3 +291,40 @@ export class QuantumvisionCdkStack extends Stack {
     });
   }
 }
+
+
+
+
+
+
+
+
+// Create a vpc for lambda
+    // const vpc = new ec2.Vpc(this, 'LambdaVpc', {
+    //   vpcName: 'qv-lambdaVpc',
+    //   ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
+    //   subnetConfiguration: [
+    //     {
+    //       cidrMask: 24,
+    //       name: 'PrivateSubnet',
+    //       subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+    //     },
+    //     {
+    //       cidrMask: 24,
+    //       name: 'PublicSubnet',
+    //       subnetType: ec2.SubnetType.PUBLIC,
+    //     }
+    //   ]
+    // });
+
+    // Creating lambda functions to handle the redaction logic for each different clearance level
+    // clearanceLevels.forEach(clearance => {
+    //   const retrieveLambda = new lambda.Function(this, `RetrieveTransformedObjectLambda${clearance}`, {
+    //     functionName: `qv-s3ObjectLambdaFunction${clearance}`,
+    //     runtime: lambda.Runtime.NODEJS_14_X,
+    //     handler: `lambda-${clearance}.handler`,
+    //     code: lambda.Code.fromAsset('resources/retrieve-transformed-object-lambda'),
+    //     layers: [qv_layer],
+        // vpc: vpc,
+        // vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      // });
