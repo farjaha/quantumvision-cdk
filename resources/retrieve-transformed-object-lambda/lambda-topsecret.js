@@ -1,15 +1,11 @@
-const aws = require('aws-sdk');
-const s3 = new aws.S3();
-const { processAndRedactData } = require('./helper_functions/dataProcessor');
+const { redactApplier } = require('./helper_functions/redactApplier');
 
 const redactFields = ["phone", "address"];
 
 const handler = async function (event, context) {
     console.log(JSON.stringify(event, undefined, 2));
 
-    const responseParams = await processAndRedactData(event, redactFields);
-
-    return s3.writeGetObjectResponse(responseParams).promise();
+    return redactApplier(event, redactFields);
 };
 
 
