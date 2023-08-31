@@ -263,7 +263,7 @@ export class QuantumvisionCdkStack extends Stack {
       authorizerName: 'QV-Authorizer',
     });
 
-    const download = api.root.addResource('download');
+    const download = api.root.addResource('download-files');
     download.addMethod('POST', lambdaIntegration, {
       authorizer: apiAuthorizer,
       authorizationType: apigateway.AuthorizationType.COGNITO,
@@ -284,7 +284,7 @@ export class QuantumvisionCdkStack extends Stack {
 
     bucket.grantRead(listLambdaFunction);
     const listLambdaIntegration = new apigateway.LambdaIntegration(listLambdaFunction);
-    const files = api.root.addResource('qvFiles');
+    const files = api.root.addResource('qv-files');
     files.addMethod('POST', listLambdaIntegration, {
       authorizer: apiAuthorizer,
       authorizationType: apigateway.AuthorizationType.COGNITO,
